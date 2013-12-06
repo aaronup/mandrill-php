@@ -36,9 +36,9 @@ abstract class Mandrill {
      * @since 1.0
      * @static
      * @ignore
-     */    
+     */
     private static $api_url        = 'https://mandrillapp.com/api/1.0/%s/%s.json';
-    
+
     /**
      * The user's API key
      * @since 1.0
@@ -46,7 +46,7 @@ abstract class Mandrill {
      * @ignore
      */
     private static $api_key        = null;
-    
+
     /**
      * Holds known Mandrill API call array. Used to validate user requests
      * @since 1.0
@@ -54,7 +54,7 @@ abstract class Mandrill {
      * @ignore
      */
     private static $api_calls      = null;
-    
+
     /**
      * Whether or not to send additional information to error_log
      * @since 1.0
@@ -62,7 +62,7 @@ abstract class Mandrill {
      * @ignore
      */
     private static $verbose        = false;
-    
+
     /**
      * Shorthand for the key property which is required for all Mandrill requests
      * @since 1.0
@@ -70,7 +70,7 @@ abstract class Mandrill {
      * @ignore
      */
     private static $required_key   = array('key');
-    
+
     /**
      * Stores last validation error message
      * @since 1.0
@@ -78,7 +78,7 @@ abstract class Mandrill {
      * @ignore
      */
     private static $last_error     = null;
-    
+
     /**
      * Returns true if the class is being run from the command line, caches result
      * @since 1.0
@@ -90,7 +90,7 @@ abstract class Mandrill {
         if(is_null(self::$is_cli)) self::$is_cli = php_sapi_name() == 'cli';
         return self::$is_cli;
     }
-    
+
     /**
      * Generates a structured array of valid Mandrill API calls
      * @since 1.0
@@ -108,14 +108,14 @@ abstract class Mandrill {
                 'disable-sender'   => array_merge_recursive(self::$required_key, array('domain')),
                 'verify-sender'    => array_merge_recursive(self::$required_key, array('email'))
             ),
-            
+
             /* Messages Calls */
             'messages'=>array(
                 'send'             => array_merge_recursive(self::$required_key, array('message')),
                 'send-template'    => array_merge_recursive(self::$required_key, array('template_name','template_content','message')),
                 'search'           => array_merge_recursive(self::$required_key, array('query','date_from','date_to','tags','senders','limit'))
             ),
-            
+
             /* Tags Calls */
             'tags'=>array(
                 'list'             => self::$required_key,
@@ -123,21 +123,21 @@ abstract class Mandrill {
                 'time-series'      => array_merge_recursive(self::$required_key, array('tag')),
                 'all-time-series'  => self::$required_key
             ),
-            
+
             /* Senders Calls */
             'senders'=>array(
                 'list'             => self::$required_key,
                 'info'             => array_merge_recursive(self::$required_key, array('address')),
                 'time-series'      => array_merge_recursive(self::$required_key, array('address'))
             ),
-            
+
             /* Urls Calls */
             'urls'=>array(
                 'list'             => self::$required_key,
                 'search'           => array_merge_recursive(self::$required_key, array('q')),
                 'time-series'      => array_merge_recursive(self::$required_key, array('url'))
             ),
-            
+
             /* Templates Calls */
             'templates'=>array(
                 'add'              => array_merge_recursive(self::$required_key, array('name','code')),
@@ -146,7 +146,7 @@ abstract class Mandrill {
                 'delete'           => array_merge_recursive(self::$required_key, array('name')),
                 'list'             => self::$required_key
             ),
-            
+
             /* Webhooks Calls */
             'webhooks'=>array(
                 'list'             => self::$required_key,
@@ -156,10 +156,10 @@ abstract class Mandrill {
                 'delete'           => array_merge_recursive(self::$required_key, array('id'))
             )
         );
-        
+
         return self::$api_calls;
     }
-    
+
     /**
      * Validates the user's parameters against known valid Mandrill API calls
      * @param string $call_type The type of Mandrill call to make, ex. 'users' or 'tags'
@@ -175,24 +175,24 @@ abstract class Mandrill {
 
         if(!array_key_exists($call_type,$api_calls)) throw new Exception('Invalid call type.');
         if(!array_key_exists($call, $api_calls[$call_type])) throw new Exception("Invalid call for call type $call_type");
-        
+
         $diff_keys = array_diff(array_keys($data),$api_calls[$call_type][$call]);
-        
+
         if(self::$verbose) error_log('MANDRILL: Invalid keys in call: '.implode(',',$diff_keys));
         if(count($diff_keys) > 0) throw new Exception('Invalid keys in call: '.implode(',',$diff_keys));
-        
+
         // @todo actually validate the fields
-        
+
         return true;
     }
-    
+
     /**
-     * Set the api_key. The Mandrill API key can be set in a number of ways. 
-     ** It can be set by the parameters passed in for an API call, ie. Mandrill::call(array('key'=>'mykey')); 
-     ** It can be set via Mandrill::setApiKey('mykey'); 
+     * Set the api_key. The Mandrill API key can be set in a number of ways.
+     ** It can be set by the parameters passed in for an API call, ie. Mandrill::call(array('key'=>'mykey'));
+     ** It can be set via Mandrill::setApiKey('mykey');
      ** It can be set directly in this class file
      ** It can be set by the MANDRILL_API_KEY constant
-     * 
+     *
      * @param mixed|string $data Associative array containing a 'key' element or a the API key as a string
      * @since 1.0
      * @static
@@ -201,10 +201,10 @@ abstract class Mandrill {
     private static function _set_api_key(&$data) {
         if(array_key_exists('key',$data)) self::$api_key = $data['key'];
         if((count($data) == 0 || is_null(self::$api_key))&& defined('MANDRILL_API_KEY')) self::$api_key = MANDRILL_API_KEY;
-        
+
         if(!isset(self::$api_key)) throw new Exception('API Key must be set.');
     }
-    
+
     /**
      * The main method which makes the curl request to the Mandrill API
      * @param mixed $data An associative array of options that correspond with the Mandrill API call being made
@@ -216,50 +216,56 @@ abstract class Mandrill {
     private static function _call_api(&$data) {
         if(!array_key_exists('type',$data)) throw new Exception('API call type must be set.');
         if(!array_key_exists('call',$data)) throw new Exception('API call must be set.');
-        
+
         self::_set_api_key($data);
-        
+
         $call_type = $data['type'];
         $call = $data['call'];
-        
+        $result = null;
+
         unset($data['type']);
         unset($data['call']);
-        
+
         if(!self::_validate_call($call_type, $call, $data)) throw new Exception(self::$last_error);
 
         $data['key'] = self::$api_key;
-        
+
         $data_string = json_encode($data);
-        
+
         $parsed_url = sprintf(self::$api_url, $call_type, $call);
-        
+
         if(self::$verbose) error_log("MANDRILL: Sending request to: $parsed_url with data: $data_string");
         if(self::_is_cli()) echo "MANDRILL: Sending request to: $parsed_url with data: $data_string".PHP_EOL;
-        
-        $ch = curl_init($parsed_url);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");                                                                     
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);                                                                  
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);                                                                      
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(                                                                          
-            'Content-Type: application/json',                                                                                
-            'Content-Length: ' . strlen($data_string))                                                                       
-        );                                                                                                               
-         
-        $result = curl_exec($ch);
-        
+
+        $request = new HttpRequest;
+        $request->setUrl( $parsed_url );
+        $request->setMethod( HttpRequest::METH_POST );
+        $request->setBody($data_string);
+        $request->addHeaders(array(
+            'Content-Type' => 'application/json',
+            'Content-Length' => strlen($data_string),
+            'Expect' => ''
+        ));
+        try {
+            $request->send();
+            $result = $request->getResponseBody();
+        } catch (HttpException $e) {
+            if(self::$verbose) error_log('Mandrill API Failed: ' . $e->getMessage());
+        }
+
         if(self::_is_cli()) echo "Mandrill API result: $result".PHP_EOL;
-        
+
         if($call != 'ping') $result = json_decode($result);
-        
+
         // @todo: Check result and throw exception?
-        
+
         return $result;
     }
-    
+
     /**
      * Rather than defining each method individually we use this method to route the
      * method call to the appropriate handler. This method should not be used directly.
-     * 
+     *
      * @param string $method Method user attempted to use
      * @param mixed $args Array of arguments the user passed to the method
      * @since 1.0
